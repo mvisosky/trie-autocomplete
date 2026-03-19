@@ -8,7 +8,7 @@ Word/phrase list is loaded from text file at application startup (yup, I know th
 
 ## Key Features
 
-* **Prefix Matching ($O(L)$):** Search performance is proportional only to the length of the query string, making it extremely fast regardless of dictionary size.
+* **Prefix Matching (O(L)):** Search performance is proportional only to the length of the query string, making it extremely fast regardless of dictionary size.
 * **Weighted Ranking:** Priorities are based on custom weights; you can "train" the Trie to boost specific terms (e.g., promoted products or trending topics).
 * **Dynamic D3.js Visualization:** A "Live-Sync" tree that re-roots and traverses itself in real-time as the user types.
 * **Breadcrumb Pathing:** Visualizes the specific character-by-character trajectory through the Trie.
