@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Trie / Prefix Tree Visualizer</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        :root {
+            --primary: #0061ff;
+            --success: #28a745;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --border: #e2e8f0;
+            --text-main: #1a202c;
+            --text-muted: #718096;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            margin: 0;
+            background: var(--bg);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 95%;
+            max-width: 1200px;
+            margin: 30px auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .card {
+            background: var(--card);
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border);
+        }
+
+        .top-grid {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            gap: 20px;
+        }
+
+        h2 {
+            margin: 0 0 15px 0;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 8px;
+        }
+
+        /* Search & Breadcrumbs */
+        .breadcrumb {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.8rem;
+            margin-bottom: 12px;
+            color: var(--text-muted);
+            background: #f1f5f9;
+            padding: 6px 12px;
+            border-radius: 6px;
+        }
+
+        .breadcrumb b {
+            color: var(--primary);
+        }
+
+        .search-area {
+            position: relative;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.2s;
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(0, 97, 255, 0.1);
+        }
+
+        .suggestions {
+            position: absolute;
+            width: 100%;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: -2px;
+        }
+
+        .sug-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #f7fafc;
+        }
+
+        .sug-item:hover {
+            background: #f0f7ff;
+        }
+
+        .weight-badge {
+            font-size: 0.7rem;
+            background: #ebf4ff;
+            color: var(--primary);
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-weight: 700;
+        }
+
+        /* Trends Section */
+        #trendsList {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .trend-tag {
+            cursor: pointer;
+            background: #fff;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            border: 1px solid var(--border);
+            transition: all 0.2s;
+        }
+
+        .trend-tag:hover {
+            border-color: var(--primary);
+            transform: translateY(-1px);
+        }
+
+        /* Training Form */
+        .form-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        /* D3 Visualizer */
+        #viz-shell {
+            width: 100%;
+            height: 500px;
+            border-radius: 8px;
+            background: white;
+            cursor: grab;
+            position: relative;
+            border: 1px solid #f1f5f9;
+        }
+
+        .node circle {
+            fill: #fff;
+            stroke: var(--primary);
+            stroke-width: 2.5px;
+        }
+
+        .node text {
+            font-size: 13px;
+            font-weight: 600;
+            fill: #4a5568;
+        }
+
+        .link {
+            fill: none;
+            stroke: #cbd5e0;
+            stroke-width: 2px;
+        }
+
+        .is-word circle {
+            fill: #c6f6d5 !important;
+            stroke: var(--success);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="top-grid">
+            <div class="card">
+                <h2>Trie Explorer & Search</h2>
+                <div class="breadcrumb" id="breadcrumb">PATH: <b>ROOT</b></div>
+                <div class="search-area">
+                    <input type="text" id="searchInput" placeholder="Type to traverse..." autocomplete="off">
+                    <div id="suggestionBox" class="suggestions"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Weight Training</h2>
+                <div class="form-group">
+                    <input type="text" id="trainWord" placeholder="Word" style="flex:2">
+                    <input type="number" id="trainWeight" placeholder="Wgt" style="flex:1">
+                    <button onclick="trainWord()">Apply</button>
+                </div>
+                <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 10px;">Set a high weight to boost
+                    global trends.</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Global Search Trends</h2>
+            <div id="trendsList"></div>
+        </div>
+
+        <div class="card">
+            <h2>Live Structure Visualization <span
+                    style="font-weight: normal; color: #a0aec0; text-transform: none;">(Syncs as you type / Green with
+                    checkmark indicates end letter of a word or phrase)</span></h2>
+            <div id="viz-shell"></div>
+        </div>
+    </div>
+
+    <script>
+        const searchInput = document.getElementById('searchInput');
+        const suggestionBox = document.getElementById('suggestionBox');
+        const breadcrumb = document.getElementById('breadcrumb');
+        let debounceTimer;
+
+        // --- 1. Autocomplete & Sync ---
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value;
+
+            // Update Breadcrumb UI
+            breadcrumb.innerHTML = query.length > 0
+                ? `PATH: ROOT > <b>${query.split('').join(' > ').toUpperCase()}</b>`
+                : `PATH: <b>ROOT</b>`;
+
+            updateSuggestions(query);
+
+            // Debounce D3 re-render
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                if (query.length > 0) syncTree(query);
+                else resetViz();
+            }, 150);
+        });
+
+        async function updateSuggestions(q) {
+            if (q.length < 1) { suggestionBox.innerHTML = ''; return; }
+            const res = await fetch(`/api/search/suggest?q=${q}`);
+            const data = await res.json();
+            suggestionBox.innerHTML = data.map(s => `
+            <div class="sug-item" onclick="selectSug('${s.word}')">
+                <span>${s.word}</span>
+                <span class="weight-badge">${s.weight.toFixed(0)}</span>
+            </div>
+        `).join('');
+        }
+
+        function selectSug(val) {
+            searchInput.value = val;
+            suggestionBox.innerHTML = '';
+            searchInput.dispatchEvent(new Event('input'));
+        }
+
+        // --- 2. Trends & Training ---
+        async function loadTrends() {
+            const res = await fetch('/api/search/trends');
+            const trends = await res.json();
+            document.getElementById('trendsList').innerHTML = trends.map(t => `
+            <div class="trend-tag" onclick="selectSug('${t.word}')">
+                🔥 ${t.word} <small>${t.weight.toFixed(0)}</small>
+            </div>
+        `).join('');
+        }
+
+        async function trainWord() {
+            const word = document.getElementById('trainWord').value;
+            const weight = document.getElementById('trainWeight').value;
+            if (!word || !weight) return;
+            await fetch('/api/search/train', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ word, weight: parseFloat(weight) })
+            });
+            document.getElementById('trainWord').value = '';
+            document.getElementById('trainWeight').value = '';
+            loadTrends();
+            resetViz();
+        }
+
+        // --- 3. D3 Core (Sync-Enabled) ---
+        let i = 0, root, svg, g, tree;
+        const width = document.getElementById('viz-shell').clientWidth;
+        const height = 500;
+
+        function initD3() {
+            d3.select("#viz-shell").select("svg").remove();
+            svg = d3.select("#viz-shell").append("svg")
+                .attr("width", width).attr("height", height)
+                .call(d3.zoom().on("zoom", (e) => g.attr("transform", e.transform)));
+            g = svg.append("g").attr("transform", "translate(100,0)");
+            tree = d3.tree().nodeSize([50, 160]);
+        }
+
+        async function syncTree(prefix) {
+            const res = await fetch(`/api/search/visualize/lazy?prefix=${prefix}`);
+            const children = await res.json();
+            const label = prefix.substring(prefix.length - 1).toUpperCase();
+
+            renderTree({
+                name: label, path: prefix,
+                children: children.map(c => ({ name: c.character, path: prefix + c.character, isWord: c.isWord, weight: c.weight }))
+            });
+        }
+
+        async function resetViz() {
+            initD3();
+            const res = await fetch('/api/search/visualize/lazy?prefix=');
+            const children = await res.json();
+            renderTree({
+                name: "ROOT", path: "",
+                children: children.map(c => ({ name: c.character, path: c.character, isWord: c.isWord, weight: c.weight }))
+            });
+        }
+
+        function renderTree(data) {
+            root = d3.hierarchy(data);
+            root.x0 = height / 2;
+            root.y0 = 0;
+            update(root);
+        }
+
+        function update(source) {
+            const nodes = tree(root).descendants();
+            const links = root.links();
+            nodes.forEach(d => d.y = d.depth * 130);
+
+            const node = g.selectAll('g.node').data(nodes, d => d.id || (d.id = ++i));
+
+            const nodeEnter = node.enter().append('g')
+                .attr('class', d => `node ${d.data.isWord ? 'is-word' : ''}`)
+                .attr('transform', d => `translate(${source.y0},${source.x0})`)
+                .on('click', async (event, d) => {
+                    if (d.children) { d._children = d.children; d.children = null; }
+                    else if (d._children) { d.children = d._children; d._children = null; }
+                    else {
+                        const res = await fetch(`/api/search/visualize/lazy?prefix=${d.data.path}`);
+                        const json = await res.json();
+                        d.children = json.map(c => ({ name: c.character, path: d.data.path + c.character, isWord: c.isWord, weight: c.weight }));
+                    }
+                    update(d);
+                });
+
+            nodeEnter.append('circle').attr('r', 8);
+            nodeEnter.append('text').attr("dy", ".35em")
+                .attr("x", d => d.children || d._children ? -15 : 15)
+                .attr("text-anchor", d => d.children || d._children ? "end" : "start")
+                .text(d => d.data.name + (d.data.isWord ? " ✓" : ""));
+
+            const nodeUpdate = nodeEnter.merge(node);
+            nodeUpdate.transition().duration(500).attr("transform", d => `translate(${d.y},${d.x})`);
+            node.exit().transition().duration(500).attr("transform", d => `translate(${source.y},${source.x})`).remove();
+
+            const link = g.selectAll('path.link').data(links, d => d.target.id);
+            const linkEnter = link.enter().insert('path', "g").attr("class", "link")
+                .attr('d', d => { const o = { x: source.x0, y: source.y0 }; return d3.linkHorizontal().x(d => d.y).y(d => d.x)({ source: o, target: o }); });
+
+            linkEnter.merge(link).transition().duration(500).attr('d', d3.linkHorizontal().x(d => d.y).y(d => d.x));
+            link.exit().transition().duration(500).attr('d', d => { const o = { x: source.x, y: source.y }; return d3.linkHorizontal().x(d => d.y).y(d => d.x)({ source: o, target: o }); }).remove();
+
+            nodes.forEach(d => { d.x0 = d.x; d.y0 = d.y; });
+        }
+
+        loadTrends();
+        resetViz();
+    </script>
+</body>
+
+</html>
