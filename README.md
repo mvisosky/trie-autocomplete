@@ -44,7 +44,7 @@ The project includes a multi-stage Dockerfile that compiles the code and runs it
 
 ---
 
-## 🔌 API Endpoints
+## API Endpoints
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
